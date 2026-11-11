@@ -98,24 +98,30 @@ class GestureHandler:
         middle_tip = hand_landmarks[12]
         ring_tip = hand_landmarks[16]
         pinky_tip = hand_landmarks[20]
+        thumb_tip = hand_landmarks[4]
         
-        # Get base of fingers
-        index_base = hand_landmarks[6]
-        middle_base = hand_landmarks[10]
-        ring_base = hand_landmarks[14]
-        pinky_base = hand_landmarks[18]
+        # Get PIP joints (middle point of finger)
+        index_pip = hand_landmarks[6]
+        middle_pip = hand_landmarks[10]
+        ring_pip = hand_landmarks[14]
+        pinky_pip = hand_landmarks[18]
+        thumb_pip = hand_landmarks[2]
         
-        # Check if index and middle are extended
-        index_extended = index_tip.y < index_base.y - 0.1
-        middle_extended = middle_tip.y < middle_base.y - 0.1
+        # More lenient detection
+        # Index should be extended (tip below PIP)
+        index_extended = index_tip.y < index_pip.y - 0.05
         
-        # Check if ring and pinky are folded
-        ring_folded = ring_tip.y > ring_base.y - 0.05
-        pinky_folded = pinky_tip.y > pinky_base.y - 0.05
+        # Middle should be extended (tip below PIP)
+        middle_extended = middle_tip.y < middle_pip.y - 0.05
         
-        if index_extended and middle_extended and ring_folded and pinky_folded:
-            return True
-        return False
+        # Ring and pinky should be folded (closer to palm)
+        ring_folded = ring_tip.y > ring_pip.y + 0.02
+        pinky_folded = pinky_tip.y > pinky_pip.y + 0.02
+        
+        # Thumb can be in any position but not between index/middle
+        result = index_extended and middle_extended and ring_folded and pinky_folded
+        
+        return result
     
     def detect_ok_sign(self, thumb_pos, index_pos, hand_landmarks):
         """Detect OK sign (thumb and index touching, other fingers extended)"""

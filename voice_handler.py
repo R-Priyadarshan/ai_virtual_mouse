@@ -61,19 +61,20 @@ class VoiceHandler:
         try:
             with self.microphone as source:
                 # Reduce noise
-                self.recognizer.adjust_for_ambient_noise(source, duration=0.1)
+                self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
                 
-                # Listen for audio
-                audio = self.recognizer.listen(source, timeout=1.0, phrase_time_limit=2.0)
+                # Listen for audio with longer timeout
+                audio = self.recognizer.listen(source, timeout=3.0, phrase_time_limit=3.0)
             
-            # Recognize speech
+            # Recognize speech with multiple attempts
             try:
-                text = self.recognizer.recognize_google(audio).lower()
-                return text
-            except sr.UnknownValueError:
+                text = self.recognizer.recognize_google(audio, language='en-US').lower()
+                if text and len(text) > 0:
+                    return text
+                return None
+            except sr.UnknownValueValue:
                 return None
             except sr.RequestError as e:
-                print(f"Speech API error: {e}")
                 return None
         
         except sr.RequestError:

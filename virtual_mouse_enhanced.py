@@ -249,8 +249,19 @@ def main():
                     
                     if gesture:
                         execute_gesture(gesture, curr_x, curr_y)
+                        gesture_display = gesture.upper().replace("_", " ")
                         cv2.putText(
-                            frame, f"GESTURE: {gesture.upper()}", (20, 40),
+                            frame, f"GESTURE: {gesture_display}", (20, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+                            (0, 255, 0), 2
+                        )
+                    
+                    # Also check for scroll gestures separately
+                    scroll_gesture = gesture_handler.detect_scroll_gesture(landmarks, h)
+                    if scroll_gesture and not gesture:
+                        execute_gesture(scroll_gesture, curr_x, curr_y)
+                        cv2.putText(
+                            frame, f"GESTURE: {scroll_gesture.upper().replace('_', ' ')}", (20, 40),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                             (0, 255, 0), 2
                         )
