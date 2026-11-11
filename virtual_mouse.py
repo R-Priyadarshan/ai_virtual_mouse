@@ -15,7 +15,7 @@ CLICK_COOLDOWN = 0.5
 prev_x, prev_y = 0.0, 0.0
 last_click = 0.0
 
-pyautogui.FAILSAFE = True
+pyautogui.FAILSAFE = False  # Disable fail-safe for full control
 pyautogui.PAUSE = 0.01
 
 mp_hands = mp.solutions.hands

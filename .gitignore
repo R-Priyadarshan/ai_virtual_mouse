@@ -36,3 +36,17 @@ wheels/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Audio files
+*.wav
+*.mp3
+*.m4a
+
+# Cache
+.cache/
+.pytest_cache/
+
