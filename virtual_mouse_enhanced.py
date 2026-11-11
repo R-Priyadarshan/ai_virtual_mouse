@@ -1,6 +1,6 @@
 """
-AI Virtual Mouse - Enhanced Edition
-Hand tracking with gesture control and voice recognition
+AI Virtual Mouse - Gesture Edition
+Hand tracking with advanced gesture control
 """
 
 import cv2
@@ -8,9 +8,7 @@ import mediapipe as mp
 import pyautogui
 import math
 import time
-import threading
 from gesture_handler import GestureHandler
-from voice_handler import VoiceHandler
 
 # Screen and webcam settings
 SCREEN_W, SCREEN_H = pyautogui.size()
@@ -29,33 +27,9 @@ pyautogui.PAUSE = 0.01
 mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
 gesture_handler = GestureHandler(click_threshold=CLICK_THRESHOLD)
-voice_handler = VoiceHandler()
 
 # State variables
-voice_command = None
-voice_command_lock = threading.Lock()
-mode = "gesture"  # Can be "gesture", "voice", or "both"
 show_info = True
-
-
-def voice_recognition_thread():
-    """Run voice recognition in a separate thread"""
-    print("🎤 Voice recognition thread started (press 'v' to toggle)")
-    while True:
-        try:
-            if mode in ["voice", "both"]:
-                command = voice_handler.get_voice_command()
-                if command:
-                    with voice_command_lock:
-                        global voice_command
-                        voice_command = command
-                        print(f"🎤 Voice command: {command}")
-            time.sleep(0.1)
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            print(f"Voice error: {e}")
-            time.sleep(0.5)
 
 
 def execute_gesture(gesture, current_x, current_y):
@@ -77,31 +51,10 @@ def execute_gesture(gesture, current_x, current_y):
         print("🖱️ Scroll down")
 
 
-def execute_voice_action(action, current_x, current_y):
-    """Execute action from voice command"""
-    if action == "click":
-        pyautogui.click()
-        print("🎤→ Click")
-    elif action == "double_click":
-        pyautogui.click(clicks=2)
-        print("🎤→ Double click")
-    elif action == "right_click":
-        pyautogui.click(button='right')
-        print("🎤→ Right click")
-    elif action == "scroll_up":
-        pyautogui.scroll(5)
-        print("🎤→ Scroll up")
-    elif action == "scroll_down":
-        pyautogui.scroll(-5)
-        print("🎤→ Scroll down")
-
-
-def draw_info_panel(frame, mode, fps, hand_detected):
+def draw_info_panel(frame, fps, hand_detected):
     """Draw information panel on frame"""
     # Draw mode indicator
-    mode_color = (0, 255, 0) if mode == "gesture" else (255, 0, 0) if mode == "voice" else (0, 165, 255)
-    mode_text = f"Mode: {mode.upper()}"
-    cv2.putText(frame, mode_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, mode_color, 2)
+    cv2.putText(frame, "Mode: GESTURE", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
     
     # Draw FPS
     cv2.putText(frame, f"FPS: {fps:.1f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -116,50 +69,38 @@ def draw_info_panel(frame, mode, fps, hand_detected):
     controls = [
         "Controls:",
         "q - Quit",
-        "v - Toggle voice",
-        "g - Gesture mode",
-        "m - Voice mode",
-        "b - Both mode"
+        "i - Toggle info",
+        "",
+        "Gestures:",
+        "Pinch - Click",
+        "Peace sign - Scroll"
     ]
     
     y_offset = 30
     for i, control in enumerate(controls):
-        cv2.putText(frame, control, (w - 250, y_offset + i * 25), 
+        cv2.putText(frame, control, (w - 200, y_offset + i * 25), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
 
 
 def main():
-    global prev_x, prev_y, last_click, voice_command, mode, show_info
+    global prev_x, prev_y, last_click, show_info
     
     cap = cv2.VideoCapture(0)
     
     if not cap.isOpened():
         raise RuntimeError("Could not open webcam")
     
-    # Start voice recognition thread
-    voice_thread = threading.Thread(target=voice_recognition_thread, daemon=True)
-    voice_thread.start()
-    
     print("=" * 60)
-    print("🎯 AI Virtual Mouse - Enhanced Edition")
+    print("🎯 AI Virtual Mouse - Gesture Edition")
     print("=" * 60)
     print("✓ Gesture control enabled")
-    print("✓ Voice recognition enabled")
     print("\nControls:")
     print("  q - Quit")
-    print("  v - Toggle voice (currently OFF)")
-    print("  g - Gesture mode only")
-    print("  m - Voice mode only")
-    print("  b - Both modes")
     print("  i - Toggle info panel")
     print("\nGesture controls:")
     print("  - Move finger to move cursor")
     print("  - Pinch to click")
     print("  - Peace sign (two fingers) to scroll")
-    print("\nVoice commands:")
-    print("  'click', 'double click', 'right click'")
-    print("  'scroll up', 'scroll down'")
-    print("  'open [app]', 'close window', 'minimize'")
     print("=" * 60 + "\n")
     
     fps_clock = time.time()
@@ -242,73 +183,40 @@ def main():
                 cv2.line(frame, (ix, iy), (tx, ty), (0, 255, 255), 2)
                 
                 # Gesture detection
-                if mode in ["gesture", "both"]:
-                    gesture = gesture_handler.get_gesture(
-                        (tx, ty), (ix, iy), landmarks, (curr_x, curr_y)
+                gesture = gesture_handler.get_gesture(
+                    (tx, ty), (ix, iy), landmarks, (curr_x, curr_y)
+                )
+                
+                if gesture:
+                    execute_gesture(gesture, curr_x, curr_y)
+                    gesture_display = gesture.upper().replace("_", " ")
+                    cv2.putText(
+                        frame, f"GESTURE: {gesture_display}", (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+                        (0, 255, 0), 2
                     )
-                    
-                    if gesture:
-                        execute_gesture(gesture, curr_x, curr_y)
-                        gesture_display = gesture.upper().replace("_", " ")
-                        cv2.putText(
-                            frame, f"GESTURE: {gesture_display}", (20, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                            (0, 255, 0), 2
-                        )
-                    
-                    # Also check for scroll gestures separately
-                    scroll_gesture = gesture_handler.detect_scroll_gesture(landmarks, h)
-                    if scroll_gesture and not gesture:
-                        execute_gesture(scroll_gesture, curr_x, curr_y)
-                        cv2.putText(
-                            frame, f"GESTURE: {scroll_gesture.upper().replace('_', ' ')}", (20, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                            (0, 255, 0), 2
-                        )
-            
-            # Handle voice commands
-            if mode in ["voice", "both"]:
-                with voice_command_lock:
-                    if voice_command:
-                        execute_voice_action(voice_command, prev_x, prev_y)
-                        cv2.putText(
-                            frame, f"VOICE: {voice_command.upper()}", (20, 130),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                            (0, 165, 255), 2
-                        )
-                        voice_command = None
+                
+                # Also check for scroll gestures separately
+                scroll_gesture = gesture_handler.detect_scroll_gesture(landmarks, h)
+                if scroll_gesture and not gesture:
+                    execute_gesture(scroll_gesture, curr_x, curr_y)
+                    cv2.putText(
+                        frame, f"GESTURE: {scroll_gesture.upper().replace('_', ' ')}", (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+                        (0, 255, 0), 2
+                    )
             
             # Draw info panel
             if show_info:
-                draw_info_panel(frame, mode, fps, hand_detected)
+                draw_info_panel(frame, fps, hand_detected)
             
-            cv2.imshow("AI Virtual Mouse - Enhanced", frame)
+            cv2.imshow("AI Virtual Mouse - Gesture", frame)
             
             # Handle keyboard input
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
                 print("\n👋 Exiting...")
                 break
-            elif key == ord("v"):
-                # Toggle voice
-                if mode == "gesture":
-                    mode = "both"
-                    print("🎤 Voice enabled (mode: BOTH)")
-                elif mode == "both":
-                    mode = "gesture"
-                    print("🔇 Voice disabled (mode: GESTURE)")
-                elif mode == "voice":
-                    mode = "both"
-                    print("🎤 Both modes enabled")
-            elif key == ord("g"):
-                mode = "gesture"
-                print("✋ Gesture mode only")
-            elif key == ord("m"):
-                mode = "voice"
-                print("🎤 Voice mode only")
-            elif key == ord("b"):
-                mode = "both"
-                print("🎤✋ Both modes enabled")
             elif key == ord("i"):
                 show_info = not show_info
                 print(f"ℹ️ Info panel: {'ON' if show_info else 'OFF'}")
